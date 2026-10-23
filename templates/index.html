@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{{ url_for('static', filename='styles/style.css')}}" rel="stylesheet" />
+    <script src="{{ url_for('static', filename='src/scriptIndex.js')}}" defer></script>
+</head>
+    <title>Movie Suggester</title>
+</head>
+<body>
+    <h1>Enter your <a href="https://www.letterboxd.com" target="_blank">Letterboxd</a> username(s) below</h1>
+    <form id="usernameForm" method="post" action="/suggestion">
+        <div class="username-entry">
+            <label for="usernameInput">Add usernames:</label>
+            <input type="text" id="usernameInput" placeholder="username">
+            <button type="button" id="submitUsername">Add to List</button>
+        </div>
+
+        <div class="username-list">
+            <h2>Users to include</h2>
+            <div id="tagContainer"></div>
+        </div>
+
+        <input type="hidden" name="usernames" id="usernamesListDisplay">
+        <button type="submit">Generate Suggestion</button>
+</form>
+</body>
+</html>
