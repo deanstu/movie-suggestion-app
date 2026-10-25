@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="{{ url_for('static', filename='styles/style.css')}}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='styles/style.css')}}" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/icon.ico') }}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/icon.ico') }}" type="image/x-icon">
     <title>Suggestion</title>
 </head>
-<body>
-    <h1>Your Suggestion</h1>
-    <h3>{{ title }}</h3>
-    <img src={{ poster }}>
+<body class="movie-page">
+    <h1 class="page-heading">Your Suggestion</h1>
+    <div class="movie-poster-pair">
+        <div class="movie-title">
+            <h3 class="title">{{ title }}</h3>
+        </div>
+        <div class="movie-poster">
+            <img class="poster" width="230" height="345" src={{ poster }}>
+        </div>
+    </div>
 </body>
 </html>

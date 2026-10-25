@@ -16,11 +16,28 @@ body {
     font-size: 2rem;
 }
 
+.movie-page {
+  background-color: darkblue;
+}
+
+a {
+  color: red;
+}
+
+.page-heading {
+  border: 4px solid black;
+  border-radius: 8px;
+  padding-inline: 0;
+  padding: 1rem;
+  background-color: #4c17dd
+}
+
 input,button {
     font-size: 2rem;
     padding: 1rem;
     border-radius: 10px;
 }
+
 
 /* Container mimics standard input styling */
 .tag-container {
@@ -67,4 +84,26 @@ input,button {
 
 .tag-pill .remove-btn:hover {
   color: #f44336;
+}
+
+.movie-poster-pair {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.movie-poster {
+  margin:0;
+  order: 1;
+  flex-grow: 1;
+}
+
+.movie-title {
+  order: 2;
+  flex-grow: 3;
+  padding: 1rem;
+  color: whitesmoke;
+}
+.poster {
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
 }
