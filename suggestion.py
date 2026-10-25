@@ -22,23 +22,25 @@ def cachePosters(posterDict = {}):
         posterDict (dict): A dictionary where the keys are movie and the values are the poster's URL. Will used "cleaned title".
         Dictionary format: 
             {
-                "Cleaned Movie Title": "URL of poster image"
+                [letter]:
+                    {"Cleaned Movie Title": "URL of poster image"}
             }
     Returns:
         dict: updated dictionary of URLs
     '''
-    new_data={}
-
+    # just reading data
     with open('posterURLs.json', 'r', encoding='utf-8') as file:
                 data = json.load(file)
     
     if posterDict == {}:
         return data
-    
+
+    #writing to
+    new_data={}
+
     with open('posterURLs.json', 'w') as file:
-        for movie in posterDict:
-            if movie not in data:
-                new_data[movie] = posterDict[movie]
+        for firstLetter, postersInLetter in posterDict.items():
+            data.setdefault(firstLetter, {}).update(postersInLetter)
         data.update(new_data)
         json.dump(data, file, indent=4)
 
@@ -95,16 +97,28 @@ def getMoviePoster(url):
     html = requests.get(url, headers=headers, impersonate="chrome120")
     if html.status_code != 200:
         return None
-    
-    varStart = str(html.text).find("https://a.ltrbxd.com/resized/film-poster")
 
+    htmlT = html.text
+
+    with open("test.txt", "w") as file:
+        file.write(htmlT)
+    
+    varStart = htmlT.find("https://a.ltrbxd.com/resized/film-poster")
+    
     if varStart == -1: # if the string is not found, try something else
-        varStart = str(html.text).find("https://a.ltrbxd.com/resized/sm/upload")
+        section = htmlT.find("/* <![CDATA[ */")
+        if section == -1:
+            return None
+        varStart = htmlT.find("https://a.ltrbxd.com/resized/sm/",section)
+
+    # need to find alternative method. this link is not the poster image
+    #if varStart == -1: # if the string is not found, try something else
+        #varStart = str(html.text).find("https://a.ltrbxd.com/resized/sm/upload")
 
     if varStart == -1: # if the string is still not found, there is no poster on the page
         return None
    
-    return html.text[varStart:html.text.find('"', varStart)]
+    return htmlT[varStart:htmlT.find('"', varStart)]
 
 
 def getWatchlistMovies(url):
@@ -121,18 +135,28 @@ def getWatchlistMovies(url):
     html = requests.get(url, headers=headers, impersonate="chrome120")
     if html.status_code != 200:
         return []
-    soup = BeautifulSoup(html.text, 'html.parser').find_all(attrs={"data-component-class": "LazyPoster"})
+
+    # get only list section
+    htmlT = html.text
+    htmlT = htmlT[htmlT.find('<div class="poster-grid"'):htmlT.find('<div class="pagination"')]
+    
+    soup = BeautifulSoup(htmlT, 'html.parser').find_all('li')
     movies = []
     
     for movie in soup:
         #get title
         varStart = str(movie).find('data-item-full-display-name')+29
         title = str(movie)[varStart:str(movie).find('"', varStart)].replace('&amp;', '&') # replace &amp; with & in the title
+
+        #get URL Name (might include year, don't have to clean)
+        varStart = str(movie).find('data-item-slug')+16
+        title = title + "^" + str(movie)[varStart:str(movie).find('"', varStart)]
         movies.append(title)
         
     return movies
 
 
+# OBSOLETE: made oboslete by additon of 'data-item-slug' in getWatchlistMovies
 def cleanMovieTitle(title):
     '''
     cleans a movie title to be used in a URL. This function will remove any special characters from the title and replace spaces with hyphens.
@@ -146,9 +170,9 @@ def cleanMovieTitle(title):
 
     specialChars = ['!', '@', '#', '$', '%', '&', '*', '(', ')', '+', ':', ';', '"', ',', '.', '?', '/']
 
-    # split from year
-    title = title.lower().split(" (19")[0]
-    title = title.split(" (20")[0]
+    # split from year ex: 'Milk (2008)'
+    year = int(title[-5:-1])
+    title = title[:-7].lower()
     titleWords = title.split("'")
     title = "".join(titleWords)
     for c in specialChars:
@@ -156,6 +180,9 @@ def cleanMovieTitle(title):
         title = " ".join(words)
     titleWords = title.split()
     title = "-".join(titleWords)
+
+    #test to see if year is needed
+
     return title
 
 
@@ -181,49 +208,40 @@ def getRandomMovie(movies, username, numSuggestions):
     cachedPosters = cachePosters() # get the cached posters from the posterURLs.json file
     toCache = {}
     returnList = []
+
+    # set movieList
     if username == "":
         movieList = []
         for userList in movies.values():
             movieList.extend(userList)
-        numIters= numSuggestions if numSuggestions <= len(movieList) else len(movieList)
-        for i in range(numIters):
-            movieIndex = random.randint(0,len(movieList)-1)
-            returnList.append(movieList[movieIndex]) 
-            title=cleanMovieTitle(movieList[movieIndex])
-            if title in cachedPosters:
-                posters[movieList[movieIndex]] = cachedPosters[title] # if the poster is already cached, use the cached URL
-            else:
-                posterURL = getMoviePoster(f"https://letterboxd.com/film/{title}/")
-                posters[movieList[movieIndex]] = posterURL # get the poster for the movie and add it to the posters dictionary
-                if posterURL != None: toCache[title] = posterURL # add the poster to the toCache dictionary so it can be cached later
-            movieList.pop(movieIndex) # remove the movie from the list so it doesn't get suggested again   
-
-        cachePosters(toCache) # cache the posters for the movies that were suggested so they don't have to be retrieved again in the future
-        return returnList,posters
-
     else:
         if username not in movies:
             return [],{}
-        numIters= numSuggestions if numSuggestions <= len(movies[username]) else len(movies[username])
-        for i in range(numIters):
-            movieIndex = random.randint(0,len(movies[username])-1)
-            returnList.append(movies[username][movieIndex])
-            title=cleanMovieTitle(movies[username][movieIndex])
-            if title in cachedPosters:
-                posters[movies[username][movieIndex]] = cachedPosters[title] # if the poster is already cached, use the cached URL
-            else:
-                posterURL = getMoviePoster(f"https://letterboxd.com/film/{title}/")
-                posters[movies[username][movieIndex]] =  posterURL# get the poster for the movie and add it to the posters dictionary
-                if posterURL != None: toCache[title] = posterURL
-            movies[username].pop(movieIndex) # remove the movie from the list so it doesn't get suggested again
-                
+        movieList = movies[username]
+    numIters= numSuggestions if numSuggestions <= len(movieList) else len(movieList)
+    for i in range(numIters):
+        movieIndex = random.randint(0,len(movieList)-1)
+        fullTitle = movieList[movieIndex].split('^')[0]
+        urlTitle=movieList[movieIndex].split('^')[1]
+        firstLetter=urlTitle[0]
+        returnList.append(fullTitle) 
+        if urlTitle in cachedPosters.get(firstLetter, {}):
+            posters[fullTitle] = cachedPosters[firstLetter][urlTitle] # if the poster is already cached, use the cached URL
+        else:
+            posterURL = getMoviePoster(f"https://letterboxd.com/film/{urlTitle}/")
+            posters[fullTitle] = posterURL # get the poster for the movie and add it to the posters dictionary
+            if posterURL is not None: 
+                toCache.setdefault(firstLetter, {})[urlTitle] = posterURL # add the poster to the toCache dictionary so it can be cached later
+        movieList.pop(movieIndex) # remove the movie from the list so it doesn't get suggested again
+    if toCache !={}:       
         cachePosters(toCache)
-        return returnList,posters
+    return returnList,posters
 
 
 if __name__ == "__main__":
-    print("*** Welcome to the Watchlist Randomizer ***\n\nPress enter between usernames.\nLeave blank to end the list.")
 
+    print("*** Welcome to the Watchlist Randomizer ***\n\nPress enter between usernames.\nLeave blank to end the list.")
+    
     usernames = []
 
     username = input("\nEnter your Letterboxd username: ")
@@ -236,6 +254,9 @@ if __name__ == "__main__":
         quit()
 
     count = int(input("\nHow many movies should I suggest? "))
+    
+    # test data usernames = ["deanonfilm","emilykaloudis","jessetheeph","delaneywoods","amandamccombs"]
+    # test count=6000
 
     userWatchlists = {}
     for user in usernames:
@@ -248,16 +269,14 @@ if __name__ == "__main__":
 
     print("\nPicking movie!")
     movieList, posters = getRandomMovie(userWatchlists, "", count)
-
+    
     if movieList == []:
         print("\nNone")
     else:
         for i in range(len(movieList)):
             print(f"\nSuggestion {i+1}: {movieList[i]}")
-            if posters[movieList[i]] is not None:
+            print()
+            if posters[movieList[i]] != None:
                 print(f"Poster URL: {posters[movieList[i]]}")
             else:
                 print("No poster available for this movie.")
-
-
-
